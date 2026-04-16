@@ -4,21 +4,23 @@
 
 ## Daftar Isi
 
-- Environment Setup
-    -  Instalasi Go
-    -  Setup Project Go
-- Go Crash Course
-    -  Variabel & Tipe Data
-    -  Array & Slices
-    -  Fungsi
-    -  Struct
-    -  Error Handling
-- [Phase 3 — Membedah Boilerplate](#phase-3--membedah-boilerplate-0045---0100)
-- [Phase 4 — Hands-on Implementation](#phase-4--hands-on-implementation-0100---0130)
-- [Phase 5 — Backend 101: Fundamental Concepts](#phase-5--backend-101-fundamental-concepts-0130---0200)
-- [Referensi & Bacaan Lanjutan](#referensi-bacaan-lanjutan)
+- [Environment Setup](#environment-setup)
+    -  [Instalasi Go](#instalasi-go)
+    -  [Setup Project Go](#setup-project-go)
+- [Go Crash Course](#go-crash-course)
+    - [Variabel & Tipe Data](#variabel--tipe-data)
+    - [Array & Slices](#array--slices)
+    - [Fungsi](#fungsi)
+    - [Struct](#struct)
+    - [Error Handling](#error-handling)
+- [Backend di Go](#backend-di-go)
+    - [Gin Web Framework](#gin-web-framework)
+    - [Gorm Library](#gorm-library)
+    - [Contoh Boilerplate](#contoh-boilerplate)
+- [Latihan Implementasi](#latihan-implementasi)
+- [Teori-teori Backend Lanjutan](#teori-teori-backend-lanjutan)
 
-## A. Environment Setup
+## Environment Setup
 ### Instalasi Go
 
 Kamu dapat mendownload Go di website resmi mereka [disini](https://go.dev/doc/install).
@@ -184,54 +186,58 @@ if err != nil {
 fmt.Println("Hasil:", result)
 ```
 
+Untuk menambah pengetahuan mengenai Go, dapat mengikuti [tour ini](https://go.dev/tour/list).
 
 
----
+## Backend Di Go
 
-### 00:25 - 00:35 | Dari `net/http` ke Gin
+Go adalah salah satu bahasa yang paling populer dalam backend development, dengan alasan-alasan berikut:
+- Go cukup gampang untuk dimengerti, sehingga kode-kode yang dibuat lebih readable dan gampang dimaintain
+- Go adalah bahasa yang sangat _opinionated_ sampai aturan formattingnya ditetapkan secara universal, sehingga bahkan seorang BE developer yang tidak pernah menyentuh codebase, dapat mengerti control flow nya dengan cepat.
+- Fitur-fitur dasar Go sangat cocok untuk backend development, berupa `net/http` dan `goroutines`, dan sudah cukup robust untuk production, dan tidak terlalu perlu memanggil dependency dari library eksternal.
+- Go sangat gampang untuk dideploy, karena semua hampir dependency dapat diinstall dengan Go sebagai "package manager" nya.
 
-#### Kenapa Tidak Pakai `net/http` Saja?
+Walau `net/http` cukup untuk membangun projek Backend yang solid, kita akan memakai framework web `gin` untuk menghindari _reinventing the wheel_.
 
-Go memiliki library HTTP bawaan (`net/http`) yang cukup powerful. Tapi untuk routing yang dinamis, kodenya cukup *boilerplate*:
+### Gin Web Framework
 
-```go
-// Contoh routing dengan net/http — agak verbose
-http.HandleFunc("/users/", func(w http.ResponseWriter, r *http.Request) {
-    // harus parsing ID dari URL secara manual
-    // harus cek method (GET/POST/dll) secara manual
-    // tidak ada helper untuk JSON response
-})
-```
+Pada singkatnya, Gin adalah framework web yang membuat routing, parsing request, dan penulisan response JSON menjadi jauh lebih ringkas.
 
-#### Masuk Gin: Express.js-nya Go
-
-**Gin** adalah HTTP framework yang membuat routing, parsing request, dan penulisan response JSON menjadi jauh lebih ringkas.
-
+Untuk menginstall gin, jalankan command ini di direktori projek Go kalian.
 ```bash
 # Install Gin
 go get github.com/gin-gonic/gin
 ```
 
+Kamu dapat merubah `main.go` kamu menjadi dibawah untuk mencoba apakah Gin berhasil diinstall.
 ```go
-// main.go dengan Gin
 package main
 
-import "github.com/gin-gonic/gin"
+import (
+  "net/http"
+
+  "github.com/gin-gonic/gin"
+)
 
 func main() {
-    r := gin.Default()
+  // Create a Gin router with default middleware (logger and recovery)
+  r := gin.Default()
 
-    r.GET("/ping", func(c *gin.Context) {
-        c.JSON(200, gin.H{
-            "message": "pong",
-        })
+  // Define a simple GET endpoint
+  r.GET("/ping", func(c *gin.Context) {
+    // Return JSON response
+    c.JSON(http.StatusOK, gin.H{
+      "message": "pong",
     })
+  })
 
-    r.Run(":8080") // server berjalan di http://localhost:8080
+  // Start server on port 8080 (default)
+  // Server will listen on 0.0.0.0:8080 (localhost:8080 on Windows)
+  r.Run()
 }
 ```
 
-Jalankan dengan `go run main.go`, lalu buka browser atau Postman ke `GET http://localhost:8080/ping`. Hasilnya:
+Jalankan dengan `go run main.go`, lalu buka browser ke `GET http://localhost:8080/ping`. Hasilnya:
 
 ```json
 {
@@ -241,41 +247,27 @@ Jalankan dengan `go run main.go`, lalu buka browser atau Postman ke `GET http://
 
 ---
 
-### 00:35 - 00:45 | Database & GORM
-
-#### Apa itu ORM?
+### Gorm Library
 
 ORM (Object-Relational Mapper) adalah alat yang menjembatani kode Go dengan database. Dengan GORM, kamu tidak perlu menulis SQL secara manual untuk operasi CRUD dasar.
 
+Untuk menginstall gorm, jalankan command ini di direktori projek Go kalian. Workshop ini akan memakai `postgres` sebagai sistem databasenya.
 ```bash
 # Install GORM dan driver PostgreSQL
 go get gorm.io/gorm
 go get gorm.io/driver/postgres
 ```
 
-#### Struct sebagai Skema Tabel
-
-GORM memetakan `struct` Go menjadi tabel di database secara otomatis. Di boilerplate ini, entity disimpan di folder `database/entities/`:
+GORM memetakan `struct` Go menjadi tabel di database secara otomatis.:
 
 ```go
-// database/entities/common.go — base struct yang di-embed oleh semua entity
-type Common struct {
-    ID        uint           `gorm:"primarykey" json:"id"`
-    CreatedAt time.Time      `json:"created_at"`
-    UpdatedAt time.Time      `json:"updated_at"`
-    DeletedAt gorm.DeletedAt `gorm:"index" json:"-"` // soft delete
-}
-
-// database/entities/user_entity.go
 type User struct {
-    Common
-    Name     string `gorm:"not null" json:"name"`
-    Email    string `gorm:"unique;not null" json:"email"`
-    Password string `gorm:"not null" json:"-"` // tidak muncul di JSON response
+    ID       uuid.UUID `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+    Name     string    `gorm:"not null" json:"name"`
+    Email    string    `gorm:"unique;not null" json:"email"`
+    Password string    `gorm:"not null" json:"-"` // tidak muncul di JSON response
 }
 ```
-
-#### Setup Koneksi Database
 
 Konfigurasi database dipisahkan ke `config/database.go`:
 
@@ -856,31 +848,6 @@ A: Tidak. Go unggul di performa, concurrency, dan binary deployment. Tapi Python
 
 **Q: Apa langkah selanjutnya setelah workshop ini?**
 A: Lihat bagian referensi di bawah.
-
----
-
-## Referensi & Bacaan Lanjutan
-
-### Go Language
-- [A Tour of Go](https://go.dev/tour/) — Tutorial interaktif resmi dari tim Go
-- [Go by Example](https://gobyexample.com/) — Belajar Go lewat contoh kode
-- [Effective Go](https://go.dev/doc/effective_go) — Panduan idiom dan best practice Go
-
-### Gin Framework
-- [Gin Documentation](https://gin-gonic.com/docs/) — Dokumentasi resmi Gin
-- [Gin GitHub](https://github.com/gin-gonic/gin) — Source code dan contoh
-
-### GORM
-- [GORM Documentation](https://gorm.io/docs/) — Dokumentasi resmi GORM
-
-### Arsitektur & Backend
-- [REST API Design Best Practices](https://restfulapi.net/)
-- [JWT.io](https://jwt.io/) — Decode dan debug JWT, plus library untuk berbagai bahasa
-- [PostgreSQL Tutorial](https://www.postgresqltutorial.com/) — Untuk upgrade dari SQLite ke Postgres
-
-### Buku Rekomendasi
-- *The Go Programming Language* — Alan Donovan & Brian Kernighan
-- *Let's Go Further* — Alex Edwards (fokus ke REST API production-ready)
 
 ---
 
