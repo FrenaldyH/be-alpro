@@ -69,6 +69,11 @@ Project ini merupakan tugas praktik atau handson pada workshop laboratorium algo
 
 ## Setup dan Instalasi
 
+
+```
+> OS: Dikerjakan di Linux (Ubuntu)
+```
+
 ### 1. Clone Repository
 
 ```
@@ -92,13 +97,13 @@ DB_NAME=[YOUR_DATABASE_NAME]
 DB_PORT=5432
 ```
 
-### Install dependencies
+### 3. Install dependencies
 
 ```
 go mod tidy
 ```
 
-### Jalankan database   
+### 4. Jalankan database   
 
 ```
 sudo systemctl start postgresql
@@ -206,7 +211,7 @@ sudo systemctl status postgresql
 }
 ```
 
-### GET `api/users/:id`
+### GET `/api/users/:id`
 
 **Response Sukses:**
 
@@ -235,12 +240,112 @@ sudo systemctl status postgresql
 }
 ```
 
-**Response Gagal - ID Tidak Valid (400):
+**Response Gagal - ID Tidak Valid (400):**
 
 ```
 {
     "message": "id tidak valid",
     "status": "error"
+}
+```
+
+## Implementasi 
+
+### Bagian yang ditambahkan
+
+**`FindAll()` - `user_repository.go`**
+
+Mengambil seluruh data user dari database menggunakan `db.Find()`.
+
+```
+func (r *UserRepository) FindAll() ([]entities.User, error) {
+    var users []entities.User
+
+    err := r.db.Find(&users).Error
+
+    return users, err
+}
+```
+
+**`FindByID()` - `user_repository.go`**
+
+Mengambil data user berdasarkan id dari database menggunakan `db.First()`.
+
+```
+func (r *UserRepository) FindByID(id uint) (*entities.User, error) {
+    var user entities.User
+
+    err := r.db.First(&user, id).Error
+    
+    return &user, err
+}
+```
+
+**`GetAllUser()` - `user_service.go`**
+
+Memanggil `FindAll()` dari repository dan meneruskan hasilnya ke controller.
+
+```
+func (s *UserService) GetAllUser() ([]entities.User, error) {
+    users, err := s.repo.FindAll()
+
+    return users, err
+}
+```
+
+**`GetUserByID` - `user_service.go`**
+
+Memanggil `FindByID()` dari repository, mengecek id yang dicari, dan meneruskan hasilnya ke controller.
+
+```
+func (s *UserService) GetUserByID(ID uint) (*entities.User, error) {
+    user, err := s.repo.FindByID(ID)
+
+    if errors.Is(err, gorm.ErrRecordNotFound) {
+        return nil, errors.New("User tidak ditemukan | service")
+    }
+    return user, err
+}
+```
+
+**`GetUsers()` - `user_controller.go`**
+
+Handler untuk `GET /api/users`, memanggil service dan mengembalikan array JSON.
+
+```
+func (ctrl *UserController) GetUsers(c *gin.Context) {
+    users, err := ctrl.service.GetAllUser()
+    if err != nil {
+        utils.ErrorResponse(c, http.StatusInternalServerError, "Gagal fetch data users")
+        return
+    }
+
+    utils.SuccessResponse(c, http.StatusOK, "Berhasil fetch data users", users)
+}
+```
+
+**`GetUserByID` - `user-controller.go`**
+
+Handler untuk `GET /api/users/:id`, mem-parsing parameter ID dari URL, mengkonversi ke 'uint', lalu memanggil service berdasarkan id yang tertera.
+
+```
+func (ctrl *UserController) GetUserByID(c *gin.Context) {
+    idParam := c.Param("id")
+
+    id, err := strconv.Atoi(idParam) 
+    if err != nil || id <= 0 {
+        
+        utils.ErrorResponse(c, http.StatusBadRequest, "id tidak valid")
+        return 
+    }
+
+    user, err := ctrl.service.GetUserByID(uint(id))
+    if err != nil {
+        utils.ErrorResponse(c, http.StatusNotFound, "id tidak ditemukan")
+        return
+    }
+
+    utils.SuccessResponse(c, http.StatusOK, "berhasil fetch data user", user)
 }
 ```
 
