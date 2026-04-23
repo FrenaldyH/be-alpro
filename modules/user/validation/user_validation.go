@@ -1,8 +1,8 @@
 package validation
 
 import (
-    "github.com/gin-gonic/gin"
-    "github.com/Mobilizes/materi-be-alpro/modules/user/dto"
+	"github.com/Mobilizes/materi-be-alpro/modules/user/dto"
+	"github.com/gin-gonic/gin"
 )
 
 func ValidateCreateUser(c *gin.Context) (*dto.CreateUserRequest, error) {

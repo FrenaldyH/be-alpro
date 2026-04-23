@@ -1,10 +1,13 @@
 package service
 
 import (
-    "github.com/Mobilizes/materi-be-alpro/database/entities"
-    "github.com/Mobilizes/materi-be-alpro/modules/user/dto"
-    "github.com/Mobilizes/materi-be-alpro/modules/user/repository"
-    "github.com/Mobilizes/materi-be-alpro/pkg/helpers"
+	"errors"
+
+	"github.com/Mobilizes/materi-be-alpro/database/entities"
+	"github.com/Mobilizes/materi-be-alpro/modules/user/dto"
+	"github.com/Mobilizes/materi-be-alpro/modules/user/repository"
+	"github.com/Mobilizes/materi-be-alpro/pkg/helpers"
+	"gorm.io/gorm"
 )
 
 type UserService struct {
@@ -30,3 +33,20 @@ func (s *UserService) CreateUser(req *dto.CreateUserRequest) (*entities.User, er
     err = s.repo.Create(user)
     return user, err
 }
+
+func (s *UserService) GetAllUser() ([]entities.User, error) {
+    users, err := s.repo.FindAll()
+
+    return users, err
+}
+
+func (s *UserService) GetUserByID(ID uint) (*entities.User, error) {
+    user, err := s.repo.FindByID(ID)
+
+    // Development: ---
+    if errors.Is(err, gorm.ErrRecordNotFound) {
+        return nil, errors.New("User tidak ditemukan | service")
+    }
+    return user, err
+}
+

@@ -3,7 +3,6 @@ package service
 import (
 	"errors"
 
-
 	"github.com/Mobilizes/materi-be-alpro/modules/auth/dto"
 	userRepo "github.com/Mobilizes/materi-be-alpro/modules/user/repository"
 	"github.com/Mobilizes/materi-be-alpro/pkg/helpers"
@@ -24,7 +23,8 @@ func NewAuthService(userRepo *userRepo.UserRepository, jwtService *JWTService) *
 func (s *AuthService) Login(req *dto.LoginRequest) (string, error) {
 	user, err := s.userRepo.FindByEmail(req.Email)
 	if err != nil {
-		return "", errors.New("email atau password salah")
+		// development: biar enak di testing
+		return "", errors.New("email tidak ditemukan")
 	}
 
 	if !helpers.CheckPasswordHash(req.Password, user.Password) {

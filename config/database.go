@@ -1,10 +1,11 @@
 package config
 
 import (
-    "fmt"
-    "os"
-    "gorm.io/driver/postgres"
-    "gorm.io/gorm"
+	"fmt"
+	"os"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 func SetupDatabase() *gorm.DB {
@@ -21,6 +22,18 @@ func SetupDatabase() *gorm.DB {
     if err != nil {
         panic("gagal konek ke database: " + err.Error())
     }
+
+    // Development: cek koneksi ke database dengan ping
+    sqlDB, err := db.DB()
+    if err != nil {
+        panic("gagal ambil instance sql.DB: " + err.Error())
+    }
+
+    if err := sqlDB.Ping(); err != nil {
+        panic("database tidak bisa di-ping: " + err.Error())
+    }
+
+    fmt.Println("Database connected!")
 
     return db
 }
